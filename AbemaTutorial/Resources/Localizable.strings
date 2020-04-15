@@ -1,2 +1,4 @@
 // MARK: - Button
 "Close" = "閉じる";
+"Error" = "エラー";
+"Sorry, something unexpected happened. Please try again later." = "エラーが発生しました。もう一度お試しください。";
