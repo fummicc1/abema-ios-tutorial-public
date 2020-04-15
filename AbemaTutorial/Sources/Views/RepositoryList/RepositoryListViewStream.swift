@@ -69,6 +69,11 @@ extension RepositoryListViewStream {
             .subscribe(onNext: { error in print("API Error: \(error)") })
             .disposed(by: disposeBag)
 
+        fetchRepositoriesAction
+            .executing
+            .bind(to: state.isRefreshControlRefreshing)
+            .disposed(by: disposeBag)
+        
         let reloadData = PublishRelay<Void>()
 
         state.repositories
