@@ -28,7 +28,7 @@ extension APIClient {
             .delay(.seconds(1), scheduler: SerialDispatchQueueScheduler(qos: .default))
             .map { _ in Array(repositories[offset ..< offset + limit]) }
             .flatMap { repositories -> Observable<[Repository]> in
-                Int.random(in: 0 ..< 10) > 0 ? .just(repositories) : .error(APIError.internalServerError)
+                Int.random(in: 0 ..< 10) > 5 ? .just(repositories) : .error(APIError.internalServerError)
             }
     }
 }

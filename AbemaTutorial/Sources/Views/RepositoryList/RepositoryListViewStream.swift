@@ -21,12 +21,14 @@ extension RepositoryListViewStream {
     struct Input: InputType {
         let viewWillAppear = PublishRelay<Void>()
         let refreshControlValueChanged = PublishRelay<Void>()
+        let retryFetchingRepositories = PublishRelay<Void>()
     }
 
     struct Output: OutputType {
         let repositories: BehaviorRelay<[Repository]>
         let reloadData: PublishRelay<Void>
         let isRefreshControlRefreshing: BehaviorRelay<Bool>
+        let failedToFetchRespositories: PublishRelay<Void>
     }
 
     struct State: StateType {
@@ -51,10 +53,13 @@ extension RepositoryListViewStream {
 
         let viewWillAppear = dependency.inputObservables.viewWillAppear
         let refreshControlValueChanged = dependency.inputObservables.refreshControlValueChanged
+        let retryFetchingRepositories = dependency.inputObservables.retryFetchingRepositories
 
         let fetchRepositories = Observable
             .merge(viewWillAppear,
-                   refreshControlValueChanged)
+                   refreshControlValueChanged,
+                   retryFetchingRepositories
+        )
 
         fetchRepositories
             .map { (limit: Const.count, offset: 0) }
@@ -65,8 +70,13 @@ extension RepositoryListViewStream {
             .bind(to: state.repositories)
             .disposed(by: disposeBag)
 
+        let failedToFetch = PublishRelay<Void>()
+        
         fetchRepositoriesAction.errors
-            .subscribe(onNext: { error in print("API Error: \(error)") })
+            .subscribe(onNext: { error in
+                print("API Error: \(error)")
+                failedToFetch.accept(())
+            })
             .disposed(by: disposeBag)
 
         fetchRepositoriesAction
@@ -83,7 +93,9 @@ extension RepositoryListViewStream {
 
         return Output(repositories: state.repositories,
                       reloadData: reloadData,
-                      isRefreshControlRefreshing: state.isRefreshControlRefreshing)
+                      isRefreshControlRefreshing: state.isRefreshControlRefreshing,
+                      failedToFetchRespositories: failedToFetch
+        )
     }
 }
 

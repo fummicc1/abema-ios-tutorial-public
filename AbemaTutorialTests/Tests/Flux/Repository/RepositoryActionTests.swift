@@ -30,8 +30,26 @@ final class RepositoryActionTests: XCTestCase {
         // APIClientから結果返却後
         apiClient._fetchRepositories.accept(.next([mockRepository]))
         apiClient._fetchRepositories.accept(.completed)
-
+ 
         XCTAssertEqual(fetchRepositories.events, [.next(true), .completed])
+    }
+    
+    func testFailFetchingRepositories() {
+        // setup
+        let testTarget = dependency.testTarget
+        let apiClient = dependency.apiClient
+        
+        // input
+        let fetchRepositories = WatchStack(testTarget.fetchRepositories(limit: 123, offset: 123).map { true })
+        
+        // check initial state.
+        XCTAssertEqual(fetchRepositories.events, [])
+        
+        // call api.
+        apiClient._fetchRepositories.accept(.error(APIError.internalServerError))
+        
+        // check after error happened.
+        XCTAssertEqual(fetchRepositories.events, [.error(APIError.internalServerError)])
     }
 }
 

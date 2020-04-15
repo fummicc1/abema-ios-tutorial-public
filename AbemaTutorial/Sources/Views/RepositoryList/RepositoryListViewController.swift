@@ -34,6 +34,17 @@ final class RepositoryListViewController: UIViewController {
             })
             .disposed(by: disposeBag)
 
+        viewStream.output.failedToFetchRespositories
+            .observeOn(MainScheduler.instance)
+            .subscribe(onNext: { [weak self] in
+                let alert = UIAlertController(title: L10n.error, message: L10n.sorrySomethingUnexpectedHappenedPleaseTryAgainLater, preferredStyle: .alert)
+                alert.addAction(UIAlertAction(title: L10n.close, style: .default, handler: { [weak self] _ in
+                    self?.viewStream.input.accept((), for: \.retryFetchingRepositories)
+                }))
+                self?.present(alert, animated: true, completion: nil)
+            })
+            .disposed(by: disposeBag)
+        
         viewStream.output.isRefreshControlRefreshing
             .bind(to: refreshControl.rx.isRefreshing)
             .disposed(by: disposeBag)
