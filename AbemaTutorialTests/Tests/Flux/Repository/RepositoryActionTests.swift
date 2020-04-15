@@ -30,7 +30,7 @@ final class RepositoryActionTests: XCTestCase {
         // APIClientから結果返却後
         apiClient._fetchRepositories.accept(.next([mockRepository]))
         apiClient._fetchRepositories.accept(.completed)
-
+ 
         XCTAssertEqual(fetchRepositories.events, [.next(true), .completed])
     }
     
