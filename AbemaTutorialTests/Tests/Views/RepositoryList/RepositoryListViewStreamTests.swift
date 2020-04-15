@@ -106,10 +106,74 @@ final class RepositoryListViewStreamTests: XCTestCase {
         repositoryAction._fetchResult.accept(.completed)
         repositoryStore._repositories.accept([mockRepository])
         
+        // check
         XCTAssertEqual(repositories.value, [mockRepository])
+        XCTAssertEqual(reloadData.events, [.next(true)])
+        XCTAssertEqual(isRefreshControlRefreshing.value, false)
+        XCTAssertEqual(failedToFetchRespositories.events, [])
+    }
+    
+    func testRetryFetchingRepositories() {
+        // setup
+        let testTarget = dependency.testTarget
+        let repositoryAction = dependency.repositoryAction
+        let repositoryStore = dependency.repositoryStore
+        
+        let mockRepository = Repository.mock()
+        
+        let repositories = WatchStack(testTarget.output.repositories)
+        let reloadData = WatchStack(testTarget.output.reloadData.map { true })
+        let isRefreshControlRefreshing = WatchStack(testTarget.output.isRefreshControlRefreshing)
+        let failedToFetchRespositories = WatchStack(testTarget.output.failedToFetchRespositories.map { true })
+        
+        // check initial state.
+        XCTAssertEqual(repositories.value, [])
         XCTAssertEqual(reloadData.events, [])
         XCTAssertEqual(isRefreshControlRefreshing.value, false)
         XCTAssertEqual(failedToFetchRespositories.events, [])
+        
+        // input
+        testTarget.input.accept((), for: \.retryFetchingRepositories)
+        
+        // retry fetching repositories
+        repositoryAction._fetchResult.accept(.next(()))
+        repositoryAction._fetchResult.accept(.completed)
+        repositoryStore._repositories.accept([mockRepository])
+        
+        // check
+        XCTAssertEqual(repositories.value, [mockRepository])
+        XCTAssertEqual(reloadData.events, [.next(true)])
+        XCTAssertEqual(isRefreshControlRefreshing.value, false)
+        XCTAssertEqual(failedToFetchRespositories.events, [])
+    }
+    
+    func testFailedFetchingRepositories() {
+        // setup
+        let testTarget = dependency.testTarget
+        let repositoryAction = dependency.repositoryAction
+        
+        let repositories = WatchStack(testTarget.output.repositories)
+        let reloadData = WatchStack(testTarget.output.reloadData.map { true })
+        let isRefreshControlRefreshing = WatchStack(testTarget.output.isRefreshControlRefreshing)
+        let failedToFetchRespositories = WatchStack(testTarget.output.failedToFetchRespositories.map { true })
+        
+        // check initial state.
+        XCTAssertEqual(repositories.value, [])
+        XCTAssertEqual(reloadData.events, [])
+        XCTAssertEqual(isRefreshControlRefreshing.value, false)
+        XCTAssertEqual(failedToFetchRespositories.events, [])
+        
+        // input
+        testTarget.input.accept((), for: \.viewWillAppear)
+        
+        // retry fetching repositories
+        repositoryAction._fetchResult.accept(.error(APIError.internalServerError))
+        
+        // check
+        XCTAssertEqual(repositories.value, [])
+        XCTAssertEqual(reloadData.events, [])
+        XCTAssertEqual(isRefreshControlRefreshing.value, false)
+        XCTAssertEqual(failedToFetchRespositories.events, [.next(true)])
     }
 }
 
