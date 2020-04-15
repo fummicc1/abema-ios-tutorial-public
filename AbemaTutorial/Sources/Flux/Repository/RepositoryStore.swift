@@ -9,7 +9,7 @@ final class RepositoryStore: RepositoryStoreType {
     static let shared = RepositoryStore()
 
     @BehaviorWrapper(value: [])
-    private(set) var repositories: Property<[Repository]>
+    var repositories: Property<[Repository]>
 
     private let disposeBag = DisposeBag()
 
