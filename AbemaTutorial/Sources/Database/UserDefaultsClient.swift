@@ -10,7 +10,7 @@ import RxSwift
 import RxCocoa
 
 protocol UserDefaultsClientType {
-    func fetchFavoriteRepositoriesID() -> Observable<Int>
+    func fetchFavoriteRepositoriesID() -> Observable<[Int]>
     func addFavoriteRepositoryId(repository id: Int) -> Observable<Void>
     func removeFavoriteRepositoryId(repository id: Int) -> Observable<Void>
 }
@@ -23,7 +23,7 @@ class UserDefaultsClient: UserDefaultsClientType {
         self.database = database
     }
     
-    func fetchFavoriteRepositoriesID() -> Observable<Int> {
+    func fetchFavoriteRepositoriesID() -> Observable<[Int]> {
         Observable<Int>.create { observer -> Disposable in
             
             return Disposables.create()
