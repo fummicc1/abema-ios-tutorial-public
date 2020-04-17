@@ -21,7 +21,21 @@ final class RepositoryListViewController: UIViewController {
         tableView.register(UITableViewCell.self) // フォールバック用
         return tableView
     }()
-
+    
+    private let filterButton: UIButton = {
+        let button = UIButton()
+        button.translatesAutoresizingMaskIntoConstraints = false
+        if #available(iOS 13, *) {
+            button.backgroundColor = UIColor.systemBackground
+            button.setImage(UIImage(systemName: "heart", withConfiguration: UIImage.SymbolConfiguration.init(pointSize: 32, weight: .bold)), for: .normal)
+        } else {
+            button.backgroundColor = UIColor.white
+            button.setTitle("♡", for: .normal)
+            button.titleLabel?.font = UIFont.boldSystemFont(ofSize: 32)
+        }
+        return button
+    }()
+    
     private let refreshControl = UIRefreshControl()
 
     init() {
@@ -63,6 +77,7 @@ final class RepositoryListViewController: UIViewController {
 
         // Layout
         view.addSubview(tableView)
+        view.addSubview(filterButton)
 
         NSLayoutConstraint.activate([
             tableView.topAnchor.constraint(equalTo: view.topAnchor),
@@ -70,11 +85,24 @@ final class RepositoryListViewController: UIViewController {
             tableView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             tableView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
         ])
+        
+        NSLayoutConstraint.activate([
+            filterButton.heightAnchor.constraint(equalToConstant: 64),
+            filterButton.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -16),
+            filterButton.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -24),
+            filterButton.widthAnchor.constraint(equalToConstant: 64)
+        ])
     }
 
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
 
         viewStream.input.accept((), for: \.viewWillAppear)
+    }
+    
+    override func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+        // Adjust UI Layout.
+        filterButton.layer.cornerRadius = filterButton.frame.size.width / 2
     }
 }
