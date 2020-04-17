@@ -24,7 +24,7 @@ class UserDefaultsClient: UserDefaultsClientType {
     }
     
     func fetchFavoriteRepositoriesID() -> Observable<[Int]> {
-        Observable<Int>.create { observer -> Disposable in
+        Observable<[Int]>.create { observer -> Disposable in
             
             return Disposables.create()
         }
