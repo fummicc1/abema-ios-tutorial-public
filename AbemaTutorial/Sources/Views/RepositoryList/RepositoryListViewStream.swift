@@ -1,6 +1,7 @@
 import Action
 import RxRelay
 import RxSwift
+import RxOptional
 import Unio
 
 protocol RepositoryListViewStreamType: AnyObject {
@@ -22,6 +23,7 @@ extension RepositoryListViewStream {
         let viewWillAppear = PublishRelay<Void>()
         let refreshControlValueChanged = PublishRelay<Void>()
         let retryFetchingRepositories = PublishRelay<Void>()
+        let didTapCell = PublishRelay<IndexPath>()
     }
 
     struct Output: OutputType {
@@ -34,12 +36,15 @@ extension RepositoryListViewStream {
     struct State: StateType {
         let repositories = BehaviorRelay<[Repository]>(value: [])
         let isRefreshControlRefreshing = BehaviorRelay<Bool>(value: false)
+        let isDisplayingOnlyFavoriteRepositories = BehaviorRelay<Bool>(value: false)
     }
 
     struct Extra: ExtraType {
         let flux: Flux
 
         let fetchRepositoriesAction: Action<(limit: Int, offset: Int), Void>
+        let fetchFavoriteRepositoriesAction: Action<Void, Void>
+        let toggleFavoriteRepositoryAction: Action<Int, Void>
     }
 }
 
@@ -54,6 +59,7 @@ extension RepositoryListViewStream {
         let viewWillAppear = dependency.inputObservables.viewWillAppear
         let refreshControlValueChanged = dependency.inputObservables.refreshControlValueChanged
         let retryFetchingRepositories = dependency.inputObservables.retryFetchingRepositories
+        let didTapCell = dependency.inputObservables.didTapCell
 
         let fetchRepositories = Observable
             .merge(viewWillAppear,
@@ -79,6 +85,8 @@ extension RepositoryListViewStream {
             })
             .disposed(by: disposeBag)
 
+         let debouncedDidTapCell = didTapCell.debounce(.milliseconds(10), scheduler: ConcurrentMainScheduler.instance)
+        
         fetchRepositoriesAction
             .executing
             .bind(to: state.isRefreshControlRefreshing)
@@ -107,6 +115,14 @@ extension RepositoryListViewStream.Extra {
 
         self.fetchRepositoriesAction = Action { limit, offset in
             repositoryAction.fetchRepositories(limit: limit, offset: offset)
+        }
+        
+        self.fetchFavoriteRepositoriesAction = Action { _ in
+            repositoryAction.fetchFavoriteRepositoriesID()
+        }
+        
+        self.toggleFavoriteRepositoryAction = Action { id in
+            repositoryAction.addFavoriteRepository(repository: id)
         }
     }
 }
