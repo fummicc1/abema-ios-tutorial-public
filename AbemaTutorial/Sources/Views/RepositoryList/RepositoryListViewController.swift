@@ -120,7 +120,7 @@ final class RepositoryListViewController: UIViewController {
             
             if #available(iOS 13, *) {
                 filterButton.backgroundColor = UIColor.systemBackground
-                filterButton.setImage(UIImage(systemName: "heart_fill", withConfiguration: UIImage.SymbolConfiguration.init(pointSize: 32, weight: .bold)), for: .normal)
+                filterButton.setImage(UIImage(systemName: "heart.fill", withConfiguration: UIImage.SymbolConfiguration.init(pointSize: 32, weight: .bold)), for: .normal)
             } else {
                 filterButton.backgroundColor = UIColor.white
                 filterButton.setTitle("❤️", for: .normal)

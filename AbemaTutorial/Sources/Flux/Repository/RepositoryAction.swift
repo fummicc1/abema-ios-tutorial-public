@@ -41,17 +41,17 @@ final class RepositoryAction: RepositoryActionType {
     
     func addFavoriteRepository(repository id: Int) -> Observable<Void> {
         localStorageClient.addFavoriteRepositoryId(repository: id)
-        .do(onNext: { [dispatcher] favorites in
-            dispatcher.updateFavoriteRepositoriesID.dispatch(favorites)
-        })
-        .map(void)
+            .do(onNext: { [dispatcher] favorites in
+                dispatcher.updateFavoriteRepositoriesID.dispatch(favorites)
+            })
+            .map(void)
     }
     
     func removeFavoriteRepository(repository id: Int) -> Observable<Void> {
         localStorageClient.removeFavoriteRepositoryId(repository: id)
-        .do(onNext: { [dispatcher] favorites in
-            dispatcher.updateFavoriteRepositoriesID.dispatch(favorites)
-        })
-        .map(void)
+            .do(onNext: { [dispatcher] favorites in
+                dispatcher.updateFavoriteRepositoriesID.dispatch(favorites)
+            })
+            .map(void)
     }
 }

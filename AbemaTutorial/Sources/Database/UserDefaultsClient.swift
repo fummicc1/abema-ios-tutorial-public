@@ -24,7 +24,7 @@ class UserDefaultsClient: UserDefaultsClientType {
     }
     
     private func fetchFavoriteRepositoriesIDFromDatabase() -> [Int] {
-        guard let favoriteRepositoriesID = database.stringArray(forKey: UserDefaults.Key.favoriteRepositoriesID)?.compactMap ({ Int($0) }) else {
+        guard let favoriteRepositoriesID = database.array(forKey: UserDefaults.Key.favoriteRepositoriesID) as? [Int] else {
             return []
         }
         return favoriteRepositoriesID
@@ -45,19 +45,19 @@ class UserDefaultsClient: UserDefaultsClientType {
     }
     
     func addFavoriteRepositoryId(repository id: Int) -> Observable<[Int]> {
-        Observable<[Int]>.create { [weak self] observer -> Disposable in
+        Single<[Int]>.create { [weak self] observer -> Disposable in
             guard let self = self else {
                 return Disposables.create()
             }
             let newFavoriteRepositoriesID = self.fetchFavoriteRepositoriesIDFromDatabase() + [id]
             self.persistFavoriteRepositoriesIDToDatabase(repositories: newFavoriteRepositoriesID)
-            observer.onNext(newFavoriteRepositoriesID)
+            observer(.success(newFavoriteRepositoriesID))
             return Disposables.create()
-        }
+        }.asObservable()
     }
     
     func removeFavoriteRepositoryId(repository id: Int) -> Observable<[Int]> {
-        Observable<[Int]>.create { [weak self] observer -> Disposable in
+        Single<[Int]>.create { [weak self] observer -> Disposable in
             guard let self = self else {
                 return Disposables.create()
             }
@@ -65,12 +65,12 @@ class UserDefaultsClient: UserDefaultsClientType {
             if let index = favoriteRepositoriesID.lazy.firstIndex(of: id) {
                 favoriteRepositoriesID.remove(at: index)
                 self.persistFavoriteRepositoriesIDToDatabase(repositories: favoriteRepositoriesID)
-                observer.onNext(favoriteRepositoriesID)
+                observer(.success(favoriteRepositoriesID))
             } else {
-                observer.onError(UserDefaultsError.doesNotExistRepositoryID)
+                observer(.error(UserDefaultsError.doesNotExistRepositoryID))
             }
             return Disposables.create()
-        }
+        }.asObservable()
     }
     
 }

@@ -40,6 +40,14 @@ extension RepositoryListViewStream {
         let favoriteRepositories = BehaviorRelay<[Int]>(value: [])
         let isRefreshControlRefreshing = BehaviorRelay<Bool>(value: false)
         let isDisplayingOnlyFavoriteRepositories = BehaviorRelay<Bool>(value: false)
+        
+        var currentRepositories: [Repository] {
+            if isDisplayingOnlyFavoriteRepositories.value {
+                return repositories.value.filter { favoriteRepositories.value.contains(Int($0.id)) }
+            } else {
+                return repositories.value
+            }
+        }
     }
 
     struct Extra: ExtraType {
@@ -47,7 +55,7 @@ extension RepositoryListViewStream {
 
         let fetchRepositoriesAction: Action<(limit: Int, offset: Int), Void>
         let fetchFavoriteRepositoriesAction: Action<Void, Void>
-        let toggleFavoriteRepositoryAction: Action<Int, Void>
+        let toggleFavoriteRepositoryAction: Action<(isRemoving: Bool, Int), Void>
     }
 }
 
@@ -58,6 +66,7 @@ extension RepositoryListViewStream {
 
         let flux = extra.flux
         let fetchRepositoriesAction = extra.fetchRepositoriesAction
+        let fetchFavoriteRepositoriesAction = extra.fetchFavoriteRepositoriesAction
         let toggleFavoriteRepositoryAction = extra.toggleFavoriteRepositoryAction
 
         let viewWillAppear = dependency.inputObservables.viewWillAppear
@@ -81,6 +90,10 @@ extension RepositoryListViewStream {
             .map { (limit: Const.count, offset: 0) }
             .bind(to: fetchRepositoriesAction.inputs)
             .disposed(by: disposeBag)
+        
+        fetchRepositories
+            .bind(to: fetchFavoriteRepositoriesAction.inputs)
+            .disposed(by: disposeBag)
 
         flux.repositoryStore.repositories.asObservable()
             .bind(to: state.repositories)
@@ -99,12 +112,16 @@ extension RepositoryListViewStream {
             })
             .disposed(by: disposeBag)
 
-         let debouncedDidTapCell = didTapCell.debounce(.milliseconds(10), scheduler: ConcurrentMainScheduler.instance)
+        let debouncedDidTapCell = didTapCell
         
         debouncedDidTapCell
-            .map { $0.row }
-            .do(onNext: { _ in
-                state.isDisplayingOnlyFavoriteRepositories.accept(!state.isDisplayingOnlyFavoriteRepositories.value)
+            .map ({ indexPath -> Repository in
+                let row = indexPath.row
+                let repository = state.currentRepositories[row]
+                return repository
+            }).withLatestFrom(state.favoriteRepositories, resultSelector: { repository, favorites -> (Bool, Int) in
+                let isRemoving = favorites.contains(Int(repository.id))
+                return (isRemoving, Int(repository.id))
             })
             .bind(to: toggleFavoriteRepositoryAction.inputs)
             .disposed(by: disposeBag)
@@ -114,20 +131,17 @@ extension RepositoryListViewStream {
             .bind(to: state.isRefreshControlRefreshing)
             .disposed(by: disposeBag)
         
-        let favoriteRepositories = state.favoriteRepositories.withLatestFrom(state.repositories) { (favorites, repositories) -> [Repository] in
-            repositories.filter { favorites.contains(Int($0.id)) }
-        }
+        
+        
+        let targetRepositories = Observable
+            .merge(
+                state.repositories.map(void),
+                state.favoriteRepositories.map(void),
+                state.isDisplayingOnlyFavoriteRepositories.map(void))
+            .map { _ in state.currentRepositories }
         
         let outputRepositories: BehaviorRelay<[Repository]> = .init(value: [])
-        state.isDisplayingOnlyFavoriteRepositories.flatMap({ onlyFavorite -> Observable<[Repository]> in
-            if onlyFavorite {
-                return favoriteRepositories
-            } else {
-                return state.repositories.asObservable()
-            }
-            })
-            .bind(to: outputRepositories)
-            .disposed(by: disposeBag)
+        targetRepositories.bind(to: outputRepositories).disposed(by: disposeBag)
         
         let reloadData = PublishRelay<Void>()
         
@@ -159,8 +173,12 @@ extension RepositoryListViewStream.Extra {
             repositoryAction.fetchFavoriteRepositoriesID()
         }
         
-        self.toggleFavoriteRepositoryAction = Action { id in
-            repositoryAction.addFavoriteRepository(repository: id)
+        self.toggleFavoriteRepositoryAction = Action { (isRemoving, id) in
+            if isRemoving {
+                return repositoryAction.removeFavoriteRepository(repository: id)
+            } else {
+                return repositoryAction.addFavoriteRepository(repository: id)
+            }
         }
     }
 }
