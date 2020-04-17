@@ -31,10 +31,12 @@ extension RepositoryListViewStream {
         let reloadData: PublishRelay<Void>
         let isRefreshControlRefreshing: BehaviorRelay<Bool>
         let failedToFetchRespositories: PublishRelay<Void>
+        let isDisplayingOnlyFavoriteRepositories: BehaviorRelay<Bool>
     }
 
     struct State: StateType {
         let repositories = BehaviorRelay<[Repository]>(value: [])
+        let favoriteRepositories = BehaviorRelay<[Int]>(value: [])
         let isRefreshControlRefreshing = BehaviorRelay<Bool>(value: false)
         let isDisplayingOnlyFavoriteRepositories = BehaviorRelay<Bool>(value: false)
     }
@@ -55,6 +57,7 @@ extension RepositoryListViewStream {
 
         let flux = extra.flux
         let fetchRepositoriesAction = extra.fetchRepositoriesAction
+        let toggleFavoriteRepositoryAction = extra.toggleFavoriteRepositoryAction
 
         let viewWillAppear = dependency.inputObservables.viewWillAppear
         let refreshControlValueChanged = dependency.inputObservables.refreshControlValueChanged
@@ -75,6 +78,10 @@ extension RepositoryListViewStream {
         flux.repositoryStore.repositories.asObservable()
             .bind(to: state.repositories)
             .disposed(by: disposeBag)
+        
+        flux.repositoryStore.favoriteRepositoriesID.asObservable()
+            .bind(to: state.favoriteRepositories)
+            .disposed(by: disposeBag)
 
         let failedToFetch = PublishRelay<Void>()
         
@@ -86,6 +93,14 @@ extension RepositoryListViewStream {
             .disposed(by: disposeBag)
 
          let debouncedDidTapCell = didTapCell.debounce(.milliseconds(10), scheduler: ConcurrentMainScheduler.instance)
+        
+        debouncedDidTapCell
+            .map { $0.row }
+            .do(onNext: { _ in
+                state.isDisplayingOnlyFavoriteRepositories.accept(!state.isDisplayingOnlyFavoriteRepositories.value)
+            })
+            .bind(to: toggleFavoriteRepositoryAction.inputs)
+            .disposed(by: disposeBag)
         
         fetchRepositoriesAction
             .executing
@@ -102,7 +117,8 @@ extension RepositoryListViewStream {
         return Output(repositories: state.repositories,
                       reloadData: reloadData,
                       isRefreshControlRefreshing: state.isRefreshControlRefreshing,
-                      failedToFetchRespositories: failedToFetch
+                      failedToFetchRespositories: failedToFetch,
+                      isDisplayingOnlyFavoriteRepositories: state.isDisplayingOnlyFavoriteRepositories
         )
     }
 }
