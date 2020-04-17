@@ -24,6 +24,7 @@ extension RepositoryListViewStream {
         let refreshControlValueChanged = PublishRelay<Void>()
         let retryFetchingRepositories = PublishRelay<Void>()
         let didTapCell = PublishRelay<IndexPath>()
+        let filterButtonTapped = PublishRelay<Void>()
     }
 
     struct Output: OutputType {
@@ -63,7 +64,13 @@ extension RepositoryListViewStream {
         let refreshControlValueChanged = dependency.inputObservables.refreshControlValueChanged
         let retryFetchingRepositories = dependency.inputObservables.retryFetchingRepositories
         let didTapCell = dependency.inputObservables.didTapCell
+        let filterButtonTapped = dependency.inputObservables.filterButtonTapped
 
+        filterButtonTapped.withLatestFrom(state.isDisplayingOnlyFavoriteRepositories.asObservable())
+            .map { !$0 }
+            .bind(to: state.isDisplayingOnlyFavoriteRepositories)
+            .disposed(by: disposeBag)
+        
         let fetchRepositories = Observable
             .merge(viewWillAppear,
                    refreshControlValueChanged,
@@ -107,14 +114,29 @@ extension RepositoryListViewStream {
             .bind(to: state.isRefreshControlRefreshing)
             .disposed(by: disposeBag)
         
+        let favoriteRepositories = state.favoriteRepositories.withLatestFrom(state.repositories) { (favorites, repositories) -> [Repository] in
+            repositories.filter { favorites.contains(Int($0.id)) }
+        }
+        
+        let outputRepositories: BehaviorRelay<[Repository]> = .init(value: [])
+        state.isDisplayingOnlyFavoriteRepositories.flatMap({ onlyFavorite -> Observable<[Repository]> in
+            if onlyFavorite {
+                return favoriteRepositories
+            } else {
+                return state.repositories.asObservable()
+            }
+            })
+            .bind(to: outputRepositories)
+            .disposed(by: disposeBag)
+        
         let reloadData = PublishRelay<Void>()
-
-        state.repositories
+        
+        outputRepositories
             .map(void)
             .bind(to: reloadData)
             .disposed(by: disposeBag)
 
-        return Output(repositories: state.repositories,
+        return Output(repositories: outputRepositories,
                       reloadData: reloadData,
                       isRefreshControlRefreshing: state.isRefreshControlRefreshing,
                       failedToFetchRespositories: failedToFetch,
